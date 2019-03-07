@@ -1,0 +1,4 @@
+How are you?
+Did you take your medicines today?
+Please rate your pain between 1 to 10.
+Please say a few words about your hand.

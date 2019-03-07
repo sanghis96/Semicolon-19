@@ -8,6 +8,7 @@ import android.hardware.Camera;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.os.Handler;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -45,6 +46,7 @@ public class CameraActivity extends Activity implements RecognitionListener {
     public static final int MEDIA_TYPE_IMAGE = 1;
     public TextToSpeech t1;
     public SpeechRecognizer speech;
+    public Intent intent;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -174,21 +176,6 @@ public class CameraActivity extends Activity implements RecognitionListener {
         }
     }
 
-    public void getCameraVoiceInput(){
-        speech = SpeechRecognizer.createSpeechRecognizer(this);
-        speech.setRecognitionListener(CameraActivity.this);
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-
-        if (intent.resolveActivity(getPackageManager()) != null) {
-            speech.startListening(intent);
-            //startActivityForResult(intent, 10);
-        } else {
-            Toast.makeText(this, "Your Device Don't Support Speech Input", Toast.LENGTH_SHORT).show();
-        }
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -240,6 +227,18 @@ public class CameraActivity extends Activity implements RecognitionListener {
 
     @Override
     public void onResults(Bundle results) {
+        ArrayList<String> matches = results
+                .getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        String text = "";
+        for (String result : matches) {
+            Log.i("onResults", result);
+            text += result + "\n";
+        }
+
+        Log.i("text", text);
+        if(text.contains("click") ) {
+            mCamera.takePicture(null, null, mPicture);
+        }
 
     }
 
@@ -297,7 +296,7 @@ public class CameraActivity extends Activity implements RecognitionListener {
             t1=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
                 @Override
                 public void onInit(int status) {
-                    Context context = getApplicationContext();
+                    final Context context = getApplicationContext();
                     if(status != TextToSpeech.ERROR) {
                         t1.setLanguage(Locale.UK);
                         String toSpeak = "Place hand in front of Camera and Say Click to Capture";
@@ -310,7 +309,27 @@ public class CameraActivity extends Activity implements RecognitionListener {
 
                             @Override
                             public void onDone(String utteranceId) {
-                                getCameraVoiceInput();
+                                speech = SpeechRecognizer.createSpeechRecognizer(context);
+                                speech.setRecognitionListener(CameraActivity.this);
+                                Handler mainHandler = new Handler(context.getMainLooper());
+                                intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+
+                                if (intent.resolveActivity(getPackageManager()) != null){
+
+                                    Runnable myRunnable = new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Log.i("Inside run" , "");
+                                            speech.startListening(intent);
+                                        } // This is your code
+                                    };
+                                    mainHandler.post(myRunnable);
+                                    //startActivityForResult(intent, 10);
+                                } else {
+                                    Toast.makeText(context, "Your Device Don't Support Speech Input", Toast.LENGTH_SHORT).show();
+                                }
                             }
 
                             @Override
@@ -322,7 +341,6 @@ public class CameraActivity extends Activity implements RecognitionListener {
                     }
                 }
             });
-            getCameraVoiceInput();
             return null;
         }
 

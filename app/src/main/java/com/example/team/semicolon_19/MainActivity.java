@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Handler;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -35,6 +36,7 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     private CheckBox cBNo;
     public SpeechRecognizer speech;
     private Integer onDoneCounter = 0;
+    public Intent intent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,18 +63,27 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.INTERNET}, 12);
             }
+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 13);
+            }
         }
 
         speech = SpeechRecognizer.createSpeechRecognizer(this);
         speech.setRecognitionListener(MainActivity.this);
 
+        getVoiceInput("Please say launch camera");
+
+    }
+
+    public void getVoiceInput(final String textToSpeak){
         t1=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int status) {
-                Context context = getApplicationContext();
+                final Context context = getApplicationContext();
                 if(status != TextToSpeech.ERROR) {
                     t1.setLanguage(Locale.UK);
-                    String toSpeak = "Please Say Launch Camera";
+                    String toSpeak = textToSpeak;
                     t1.setOnUtteranceProgressListener(new UtteranceProgressListener() {
 
                         @Override
@@ -82,7 +93,25 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
                         @Override
                         public void onDone(String utteranceId) {
+                            Handler mainHandler = new Handler(context.getMainLooper());
+                            intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
 
+                            if (intent.resolveActivity(getPackageManager()) != null){
+
+                                Runnable myRunnable = new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Log.i("Inside run" , "");
+                                        speech.startListening(intent);
+                                    } // This is your code
+                                };
+                                mainHandler.post(myRunnable);
+                                //startActivityForResult(intent, 10);
+                            } else {
+                                Toast.makeText(context, "Your Device Don't Support Speech Input", Toast.LENGTH_SHORT).show();
+                            }
                         }
 
                         @Override
@@ -94,51 +123,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 }
             }
         });
-
-        Log.i("onDoneCounter", onDoneCounter.toString());
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-
-        if (intent.resolveActivity(getPackageManager()) != null) {
-            speech.startListening(intent);
-            //startActivityForResult(intent, 10);
-        } else {
-            Toast.makeText(this, "Your Device Don't Support Speech Input", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    public void getSpeechInput(View view) {
-        getInput();
-    }
-
-    public void getInput(){
-        Log.i("getInput", onDoneCounter.toString());
-        onDoneCounter = 1;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        switch (requestCode) {
-            case 10:
-                if (resultCode == RESULT_OK && data != null) {
-                    ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                    txvResult.setText(result.get(0));
-                    Log.i("result", result.get(0));
-                    if(result.get(0).equalsIgnoreCase("Launch Camera")) {
-                        new Thread(new Runnable() {
-                            public void run() {
-                                // a potentially time consuming task
-                                Intent in = new Intent(MainActivity.this, CameraActivity.class);
-                                startActivity(in);
-                            }
-                        }).start();
-                    }
-
-                }
-        }
     }
 
     @Override
@@ -173,7 +157,6 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
 
     @Override
     public void onResults(Bundle results) {
-        Log.i("1", "onResults");
         ArrayList<String> matches = results
                 .getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         String text = "";
@@ -183,6 +166,19 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         }
 
         Log.i("text", text);
+        if(text.contains("camera") ) {
+            Log.i("in camera intent", "camera");
+            new Thread(new Runnable() {
+                public void run() {
+                // a potentially time consuming task
+                Intent in = new Intent(MainActivity.this, CameraActivity.class);
+                startActivity(in);
+                }
+            }).start();
+        }
+        else{
+            getVoiceInput("Please say again I can't understand that");
+        }
     }
 
     @Override

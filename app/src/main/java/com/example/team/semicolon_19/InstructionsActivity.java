@@ -1,151 +1,212 @@
 package com.example.team.semicolon_19;
 
-import android.app.DatePickerDialog;
+
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.net.Uri;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
-import android.provider.MediaStore;
+import android.os.Handler;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
-import android.widget.CalendarView;
-import android.widget.DatePicker;
-import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.VolleyLog;
-import com.android.volley.toolbox.StringRequest;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
-import java.io.UnsupportedEncodingException;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Locale;
 
-public class InstructionsActivity extends AppCompatActivity {
+public class InstructionsActivity extends AppCompatActivity implements RecognitionListener {
 
-    private EditText fromDate;
-    private EditText toDate;
-    private int mYear, mMonth, mDay;
-    private Button getData;
-    private EditText patientData;
+
+    TextToSpeech t1;
+    public SpeechRecognizer speech;
+    public Intent intent;
+    public String[] question;
+    public int questionNumber = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_instructions);
 
-        fromDate = (EditText) findViewById(R.id.fromDate);
-        toDate = (EditText) findViewById(R.id.toDate);
-        getData = (Button) findViewById(R.id.getData);
-        patientData = (EditText) findViewById(R.id.patientData);
+        if(Build.VERSION.SDK_INT >= 23) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, 10);
+            }
 
-    }
-     public void selectDates(View view) {
-         // Get Current Date
-         final Calendar c = Calendar.getInstance();
-         mYear = c.get(Calendar.YEAR);
-         mMonth = c.get(Calendar.MONTH);
-         mDay = c.get(Calendar.DAY_OF_MONTH);
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 11);
+            }
 
-         if(view == fromDate) {
-             DatePickerDialog datePickerDialog = new DatePickerDialog(this,
-                     new DatePickerDialog.OnDateSetListener() {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 12);
+            }
 
-                         @Override
-                         public void onDateSet(DatePicker view, int year,
-                                               int monthOfYear, int dayOfMonth) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.INTERNET}, 12);
+            }
 
-                             fromDate.setText(dayOfMonth + "-" + (monthOfYear + 1) + "-" + year);
-
-                         }
-                     }, mYear, mMonth, mDay);
-             datePickerDialog.getDatePicker().setMaxDate(new Date().getTime());
-             datePickerDialog.show();
-         } else if (view == toDate) {
-             DatePickerDialog datePickerDialog = new DatePickerDialog(this,
-                     new DatePickerDialog.OnDateSetListener() {
-
-                         @Override
-                         public void onDateSet(DatePicker view, int year,
-                                               int monthOfYear, int dayOfMonth) {
-
-                             toDate.setText(dayOfMonth + "-" + (monthOfYear + 1) + "-" + year);
-
-                         }
-                     }, mYear, mMonth, mDay);
-             datePickerDialog.getDatePicker().setMaxDate(new Date().getTime());
-             datePickerDialog.show();
-         }
-     }
-
-    public void getPatientData(View view) {
-        System.out.println("Samarth 1");
-        String url = "https://radetection-developer-edition.ap8.force.com/services/apexrest/GetContactReport/";
-        JSONObject jsonBody = new JSONObject();
-        try {
-            jsonBody.put("ContactId", "12121212");
-            jsonBody.put("SatrtDate", "15/03/2018");
-            jsonBody.put("EndDate", "15/03/2018");
-        } catch (JSONException e) {
-            e.printStackTrace();
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 13);
+            }
         }
 
-        final String requestBody = jsonBody.toString();
-        Context context=InstructionsActivity.this;
-        RequestQueue queue = VolleyService.getInstance(context).getRequestQueue();
-        StringRequest request = new StringRequest(Request.Method.POST,url, new Response.Listener<String>() {
-            @Override
-            public void onResponse(String response) {
-                // we got the response, now our job is to handle it
-                //Here you parse your JSON - best approach is to use GSON for deserialization
-                System.out.println("samarth"+response);
-                patientData.setText(response,TextView.BufferType.NORMAL);
-                if(response.contains("Success")) {
+        speech = SpeechRecognizer.createSpeechRecognizer(this);
+        speech.setRecognitionListener(InstructionsActivity.this);
 
-                    //Intent in = new Intent(LoginActivity.this, MainActivity.class);
-                    //startActivity(in);
+        getVoiceInput("Hi! Let's begin with your assessment.", false);
+        InputStream inputStream = getResources().openRawResource(R.raw.questions_list);
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+        int i;
+        try {
+            i = inputStream.read();
+            while (i != -1)
+            {
+                byteArrayOutputStream.write(i);
+                i = inputStream.read();
+            }
+            inputStream.close();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        String questions = byteArrayOutputStream.toString();
+        question = questions.split("\n");
+
+    }
+
+    public void getVoiceInput(final String textToSpeak, final Boolean isQuestion){
+        t1=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                final Context context = getApplicationContext();
+                if(status != TextToSpeech.ERROR) {
+                    t1.setLanguage(Locale.UK);
+                    String toSpeak = textToSpeak;
+                    t1.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+
+                        @Override
+                        public void onStart(String utteranceId) {
+                            //getInput();
+                        }
+
+                        @Override
+                        public void onDone(String utteranceId) {
+                            if(isQuestion) {
+                                Handler mainHandler = new Handler(context.getMainLooper());
+                                intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+
+                                if (intent.resolveActivity(getPackageManager()) != null){
+
+                                    Runnable myRunnable = new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Log.i("Inside run" , "");
+                                            speech.startListening(intent);
+                                        } // This is your code
+                                    };
+                                    mainHandler.post(myRunnable);
+                                    //startActivityForResult(intent, 10);
+                                } else {
+                                    Toast.makeText(context, "Your Device Don't Support Speech Input", Toast.LENGTH_SHORT).show();
+                                }
+                            } else {
+                                if(questionNumber < question.length) {
+                                    getVoiceInput(question[questionNumber++], true);
+                                } else {
+                                    new Thread(new Runnable() {
+                                        public void run() {
+                                            // a potentially time consuming task
+                                            Intent in = new Intent(InstructionsActivity.this, CameraActivity.class);
+                                            startActivity(in);
+                                        }
+                                    }).start();
+                                }
+                            }
+
+                        }
+
+                        @Override
+                        public void onError(String utteranceId) {
+
+                        }
+                    });
+                    t1.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "1");
                 }
-
             }
-        }, new Response.ErrorListener() {
+        });
+    }
 
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                //something happened, treat the error.
-                Log.e("Samarth Error", error.toString());
-            }
+    @Override
+    public void onReadyForSpeech(Bundle params) {
 
+    }
 
-        }){
-            @Override
-            public String getBodyContentType() {
-                return "application/json; charset=utf-8";
-            }
+    @Override
+    public void onBeginningOfSpeech() {
 
-            @Override
-            public byte[] getBody() throws AuthFailureError {
-                try {
-                    return requestBody == null ? null : requestBody.getBytes("utf-8");
-                } catch (UnsupportedEncodingException uee) {
-                    VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", requestBody, "utf-8");
-                    return null;
-                }
-            }
-        };
+    }
 
-        queue.add(request);
+    @Override
+    public void onRmsChanged(float rmsdB) {
+
+    }
+
+    @Override
+    public void onBufferReceived(byte[] buffer) {
+
+    }
+
+    @Override
+    public void onEndOfSpeech() {
+
+    }
+
+    @Override
+    public void onError(int error) {
+
+    }
+
+    @Override
+    public void onResults(Bundle results) {
+        ArrayList<String> matches = results
+                .getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        String text = "";
+        for (String result : matches) {
+            Log.i("onResults", result);
+            text += result + "\n";
+        }
+
+        Log.i("text", text);
+        System.out.println("Samarth"+text);
+        if(questionNumber < question.length) {
+            getVoiceInput(question[questionNumber++], true);
+        } else {
+            getVoiceInput("Now let's take a picture of your hand.", false);
+        }
+    }
+
+    @Override
+    public void onPartialResults(Bundle partialResults) {
+
+    }
+
+    @Override
+    public void onEvent(int eventType, Bundle params) {
+
     }
 }

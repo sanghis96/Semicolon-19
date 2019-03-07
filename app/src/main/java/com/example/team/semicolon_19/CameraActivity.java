@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -34,6 +35,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import static android.content.ContentValues.TAG;
@@ -57,7 +59,31 @@ public class CameraActivity extends Activity implements RecognitionListener {
 
         // Create an instance of Camera
         mCamera = getCameraInstance();
+        Camera.Parameters params=mCamera.getParameters();
 
+        List<Camera.Size> sizes = params.getSupportedPictureSizes();
+        Camera.Size size = sizes.get(0);
+//Camera.Size size1 = sizes.get(0);
+        for(int i=0;i<sizes.size();i++)
+        {
+
+            if(sizes.get(i).width > size.width)
+                size = sizes.get(i);
+
+
+        }
+
+//System.out.println(size.width + "mm" + size.height);
+        params.setPictureSize(size.width, size.height);
+        params.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
+        params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+        params.setSceneMode(Camera.Parameters.SCENE_MODE_AUTO);
+        params.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_AUTO);
+        params.setExposureCompensation(0);
+        params.setPictureFormat(ImageFormat.JPEG);
+        params.setJpegQuality(100);
+        params.setRotation(90);
+        mCamera.setParameters(params);
         System.out.println("Samarth 2");
 
         // Create our Preview view and set it as the content of our activity.
@@ -67,10 +93,10 @@ public class CameraActivity extends Activity implements RecognitionListener {
 
         System.out.println("Samarth 3");
 
-        Download d = new Download();
+        Download d ;
         String s = null;
         try {
-            s = d.execute().get();
+            d = new Download();
         }
         catch(Exception e){
             Log.i("Exception", e.getMessage());
@@ -120,8 +146,12 @@ public class CameraActivity extends Activity implements RecognitionListener {
                 FileOutputStream fos = new FileOutputStream(pictureFile);
                 fos.write(data);
                 fos.close();
+                sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.parse("file://" + pictureFile)));
+
                 System.out.println("Samarth 9");
-                Intent in = new Intent(CameraActivity.this, InstructionsActivity.class);
+                Intent in = new Intent(CameraActivity.this, ImageViewActivity.class);
+                in.putExtra("filePath",pictureFile.getAbsolutePath());
+
                 startActivity(in);
             } catch (FileNotFoundException e) {
                 Log.d(TAG, "File not found: " + e.getMessage());
@@ -289,10 +319,10 @@ public class CameraActivity extends Activity implements RecognitionListener {
         return message;
     }
 
-    public class Download extends AsyncTask<String,Void,String>
+    public class Download
     {
-        @Override
-        protected String doInBackground(String... params) {
+
+          Download() {
             t1=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
                 @Override
                 public void onInit(int status) {
@@ -309,27 +339,32 @@ public class CameraActivity extends Activity implements RecognitionListener {
 
                             @Override
                             public void onDone(String utteranceId) {
-                                speech = SpeechRecognizer.createSpeechRecognizer(context);
-                                speech.setRecognitionListener(CameraActivity.this);
                                 Handler mainHandler = new Handler(context.getMainLooper());
-                                intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                                Runnable myRun=new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        speech = SpeechRecognizer.createSpeechRecognizer(context);
+                                        speech.setRecognitionListener(CameraActivity.this);
+                                        Handler mainHandler = new Handler(context.getMainLooper());
+                                        intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                                        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                                        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
 
-                                if (intent.resolveActivity(getPackageManager()) != null){
+                                        if (intent.resolveActivity(getPackageManager()) != null){
 
-                                    Runnable myRunnable = new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            Log.i("Inside run" , "");
-                                            speech.startListening(intent);
-                                        } // This is your code
-                                    };
-                                    mainHandler.post(myRunnable);
-                                    //startActivityForResult(intent, 10);
-                                } else {
-                                    Toast.makeText(context, "Your Device Don't Support Speech Input", Toast.LENGTH_SHORT).show();
-                                }
+
+                                                    Log.i("Inside run" , "");
+                                                    speech.startListening(intent);
+
+                                            //mainHandler.post(myRunnable);
+                                            //startActivityForResult(intent, 10);
+                                        } else {
+                                            Toast.makeText(context, "Your Device Don't Support Speech Input", Toast.LENGTH_SHORT).show();
+                                        }
+                                    }
+                                };
+                                mainHandler.post(myRun);
+
                             }
 
                             @Override
@@ -341,7 +376,7 @@ public class CameraActivity extends Activity implements RecognitionListener {
                     }
                 }
             });
-            return null;
+
         }
 
     }

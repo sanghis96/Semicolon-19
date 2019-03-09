@@ -3,6 +3,7 @@ package com.example.team.semicolon_19;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
@@ -149,10 +150,23 @@ public class CameraActivity extends Activity implements RecognitionListener {
                 sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.parse("file://" + pictureFile)));
 
                 System.out.println("Samarth 9");
-                Intent in = new Intent(CameraActivity.this, ImageViewActivity.class);
-                in.putExtra("filePath",pictureFile.getAbsolutePath());
 
-                startActivity(in);
+                SharedPreferences sp = getSharedPreferences("SharedQuestionNo",MODE_PRIVATE);
+                if(sp.getInt("questionNumber",0) == 0) {
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.putInt("questionNumber",10);
+                    editor.putString("hand","right");
+                    editor.commit();
+
+                    Intent in = new Intent(CameraActivity.this, InstructionsActivity.class);
+                    startActivity(in);
+                } else {
+                    Intent in = new Intent(CameraActivity.this, ImageViewActivity.class);
+                    in.putExtra("filePath",pictureFile.getAbsolutePath());
+
+                    startActivity(in);
+                }
+
             } catch (FileNotFoundException e) {
                 Log.d(TAG, "File not found: " + e.getMessage());
             } catch (IOException e) {

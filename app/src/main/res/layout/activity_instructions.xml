@@ -7,4 +7,13 @@
     tools:context=".InstructionsActivity">
 
 
+    <EditText
+        android:id="@+id/editText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textMultiLine"
+        android:text="Make sure background is white.\nPlace your hand properly.\nIt shoul be in the frame."
+        tools:layout_editor_absoluteX="98dp"
+        tools:layout_editor_absoluteY="135dp" />
 </android.support.constraint.ConstraintLayout>

@@ -24,6 +24,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -87,6 +88,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
                 startActivityForResult(i, 50);
             }
         });
+
+
 
         /*speech = SpeechRecognizer.createSpeechRecognizer(this);
         speech.setRecognitionListener(MainActivity.this);

@@ -3,6 +3,7 @@
     <string name="title_activity_login">Sign in</string>
 
     <!-- Strings related to login -->
+    <string name="input_placeholder">Write a message</string>
     <string name="prompt_email">Email</string>
     <string name="prompt_password">Password (optional)</string>
     <string name="action_sign_in">Sign in or register</string>
@@ -15,4 +16,9 @@
         completions."
     </string>
     <string name="title_activity_image_view">ImageViewActivity</string>
+
+    <string name="count_initial_value">0</string>
+    <string name="button_label">Send</string>
+    <string name="toast_message">Hurra!</string>
+
 </resources>

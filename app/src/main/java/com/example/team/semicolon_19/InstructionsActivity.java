@@ -17,6 +17,8 @@ import android.speech.tts.UtteranceProgressListener;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Toast;
 
 
@@ -33,6 +35,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
+import java.util.Random;
 
 public class InstructionsActivity extends AppCompatActivity implements RecognitionListener {
 
@@ -43,12 +46,25 @@ public class InstructionsActivity extends AppCompatActivity implements Recogniti
     public int questionNumber;
     public String[] conditionList;
     List<dataWrapper> dw = new ArrayList<dataWrapper>();
+    private EditText editText;
+    private MessageAdapter messageAdapter;
+    private ListView messagesView;
+    private MemberData data;
+    public  Message mess;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_instructions);
+
+        editText = (EditText) findViewById(R.id.editText);
+
+        messageAdapter = new MessageAdapter(this);
+        messagesView = (ListView) findViewById(R.id.messages_view);
+        messagesView.setAdapter(messageAdapter);
+
+        data = new MemberData(getRandomName(), getRandomColor());
 
         if(Build.VERSION.SDK_INT >= 23) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -121,7 +137,7 @@ public class InstructionsActivity extends AppCompatActivity implements Recogniti
                 final Context context = getApplicationContext();
                 if(status != TextToSpeech.ERROR) {
                     t1.setLanguage(Locale.UK);
-                    String toSpeak = textToSpeak;
+                    final String toSpeak = textToSpeak;
                     t1.setOnUtteranceProgressListener(new UtteranceProgressListener() {
 
                         @Override
@@ -131,7 +147,7 @@ public class InstructionsActivity extends AppCompatActivity implements Recogniti
 
                         @Override
                         public void onDone(String utteranceId) {
-
+                            setChatText(toSpeak, false);
                             if(isQuestion) {
                                 Log.d("Samarth","Question hai");
                                 Handler mainHandler = new Handler(context.getMainLooper());
@@ -255,6 +271,7 @@ public class InstructionsActivity extends AppCompatActivity implements Recogniti
             Log.d("Samarth",txtToSpeak);
             Log.d("Samarth",""+isQues);
 
+            setChatText(text.split("\n")[0], true);
             getVoiceInput(txtToSpeak, isQues);
         } else {
             //getVoiceInput("Now let's take a picture of your hand.", false);
@@ -291,5 +308,65 @@ public class InstructionsActivity extends AppCompatActivity implements Recogniti
         String fileText = byteArrayOutputStream.toString();
         //String[] lineWiseText = fileText.split("\n");
         return fileText;
+    }
+
+    private void setChatText(String text, Boolean user){
+        mess = new Message(text, data, user);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                messageAdapter.add(mess);
+                messagesView.setSelection(messagesView.getCount() - 1);
+            }
+        });
+    }
+
+    private String getRandomName() {
+        String[] adjs = {"autumn", "hidden", "bitter", "misty", "silent", "empty", "dry", "dark", "summer", "icy", "delicate", "quiet", "white", "cool", "spring", "winter", "patient", "twilight", "dawn", "crimson", "wispy", "weathered", "blue", "billowing", "broken", "cold", "damp", "falling", "frosty", "green", "long", "late", "lingering", "bold", "little", "morning", "muddy", "old", "red", "rough", "still", "small", "sparkling", "throbbing", "shy", "wandering", "withered", "wild", "black", "young", "holy", "solitary", "fragrant", "aged", "snowy", "proud", "floral", "restless", "divine", "polished", "ancient", "purple", "lively", "nameless"};
+        String[] nouns = {"waterfall", "river", "breeze", "moon", "rain", "wind", "sea", "morning", "snow", "lake", "sunset", "pine", "shadow", "leaf", "dawn", "glitter", "forest", "hill", "cloud", "meadow", "sun", "glade", "bird", "brook", "butterfly", "bush", "dew", "dust", "field", "fire", "flower", "firefly", "feather", "grass", "haze", "mountain", "night", "pond", "darkness", "snowflake", "silence", "sound", "sky", "shape", "surf", "thunder", "violet", "water", "wildflower", "wave", "water", "resonance", "sun", "wood", "dream", "cherry", "tree", "fog", "frost", "voice", "paper", "frog", "smoke", "star"};
+        return (
+                adjs[(int) Math.floor(Math.random() * adjs.length)] +
+                        "_" +
+                        nouns[(int) Math.floor(Math.random() * nouns.length)]
+        );
+    }
+
+    private String getRandomColor() {
+        Random r = new Random();
+        StringBuffer sb = new StringBuffer("#");
+        while(sb.length() < 7){
+            sb.append(Integer.toHexString(r.nextInt()));
+        }
+        return sb.toString().substring(0, 7);
+    }
+
+}
+
+class MemberData {
+    private String name;
+    private String color;
+
+    public MemberData(String name, String color) {
+        this.name = name;
+        this.color = color;
+    }
+
+    public MemberData() {
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    @Override
+    public String toString() {
+        return "MemberData{" +
+                "name='" + name + '\'' +
+                ", color='" + color + '\'' +
+                '}';
     }
 }

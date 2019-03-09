@@ -6,6 +6,7 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
 import android.content.OperationApplicationException;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.RemoteException;
 import android.support.annotation.NonNull;
@@ -76,12 +77,14 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
-
+    public static final String MyPREFERENCES = "MyPrefs" ;
+    SharedPreferences sharedpreferences;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         // Set up the login form.
+        SharedPreferences sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
         populateAutoComplete();
 
@@ -303,7 +306,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
     public void connectWebservice(String username, String password){
         String url = "https://radetection-developer-edition.ap8.force.com/services/apexrest/ContactAuthrization/";
-        JSONObject jsonBody = new JSONObject();
+        final JSONObject jsonBody = new JSONObject();
         try {
             jsonBody.put("userName", username);
             jsonBody.put("password", password);
@@ -321,6 +324,16 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 //Here you parse your JSON - best approach is to use GSON for deserialization
                 System.out.println("samarth"+response);
                 if(response.contains("Success")) {
+                    try {
+                        JSONObject jsonObject= new JSONObject(response);
+                        jsonObject.getString("contactId");
+                        SharedPreferences.Editor editor = sharedpreferences.edit();
+                        editor.putString("contactId",jsonBody.getString("contactId"));
+                        editor.commit();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
                     Intent in = new Intent(LoginActivity.this, MainActivity.class);
                     startActivity(in);
                 }

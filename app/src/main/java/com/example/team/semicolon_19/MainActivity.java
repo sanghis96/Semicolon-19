@@ -5,19 +5,26 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
+import android.provider.MediaStore;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,9 +41,11 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
     TextToSpeech t1;
     private CheckBox cBYes;
     private CheckBox cBNo;
+    public Intent intent;
     public SpeechRecognizer speech;
     private Integer onDoneCounter = 0;
-    public Intent intent;
+    private ImageView imView;
+    private Button inputImage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +55,8 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
         txvResult = (TextView) findViewById(R.id.txvResult);
         cBYes = (CheckBox) findViewById(R.id.checkBoxYes);
         cBNo = (CheckBox) findViewById(R.id.checkBoxNo);
+        inputImage = (Button) findViewById(R.id.btnSpeak);
+        imView = (ImageView) findViewById(R.id.imView);
 
         if(Build.VERSION.SDK_INT >= 23) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -69,11 +80,40 @@ public class MainActivity extends AppCompatActivity implements RecognitionListen
             }
         }
 
-        speech = SpeechRecognizer.createSpeechRecognizer(this);
+        inputImage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(Intent.ACTION_PICK,android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                startActivityForResult(i, 50);
+            }
+        });
+
+        /*speech = SpeechRecognizer.createSpeechRecognizer(this);
         speech.setRecognitionListener(MainActivity.this);
 
-        getVoiceInput("Please say launch camera");
+        getVoiceInput("Please say launch camera");*/
 
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch(requestCode){
+            case 50 :
+                if(resultCode == RESULT_OK && data != null) {
+                    Uri selectedImage = data.getData();
+                    String[] filePathColumn = {MediaStore.Images.Media.DATA};
+                    Cursor cursor = getContentResolver().query(selectedImage, null, null, null, null);
+                    cursor.moveToFirst();
+                    int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+                    String picturePath = cursor.getString(columnIndex);
+                    cursor.close();
+                    imView.setImageBitmap(BitmapFactory.decodeFile(picturePath));
+                }
+                else{
+                    Toast.makeText(MainActivity.this, "Image Is Not Correct", Toast.LENGTH_SHORT);
+                }
+        }
     }
 
     public void getVoiceInput(final String textToSpeak){

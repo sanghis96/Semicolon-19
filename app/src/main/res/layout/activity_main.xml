@@ -12,6 +12,11 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/imView"/>
+
         <TextView
             android:id="@+id/txvResult"
             android:layout_width="wrap_content"
@@ -39,16 +44,15 @@
             android:layout_centerVertical="true"
             android:text="No" />
 
-<!--
+
         <Button
             android:id="@+id/btnSpeak"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/checkBoxYes"
             android:layout_centerHorizontal="true"
-            android:onClick="getSpeechInput"
-            android:text="Button" />
--->
+            android:text="Choose Image"
+            android:textAllCaps="false"/>
     </RelativeLayout>
 
 
